@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Breakout</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+  }
+  #hud {
+    margin: 10px;
+    font-size: 18px;
+  }
+  #game {
+    position: relative;
+    margin: 10px auto;
+    width: 600px;
+    height: 400px;
+    background: #000;
+    border: 2px solid #fff;
+    overflow: hidden;
+  }
+  #paddle {
+    position: absolute;
+    bottom: 10px;
+    left: 250px;
+    width: 100px;
+    height: 15px;
+    background: #0f0;
+    border-radius: 8px;
+  }
+  #ball {
+    position: absolute;
+    top: 200px;
+    left: 290px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+  }
+  .brick {
+    position: absolute;
+    width: 60px;
+    height: 20px;
+    border-radius: 4px;
+  }
+  #gameOver {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+  }
+  #gameOver button {
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: none;
+    background: #0f0;
+    color: #000;
+  }
+</style>
+</head>
+<body>
+<h2>Breakout</h2>
+<div id="hud">
+  Puntos: <span id="score">0</span> | Tiempo: <span id="timer">60</span>s
+</div>
+<div id="game">
+  <div id="paddle"></div>
+  <div id="ball"></div>
+  <div id="gameOver">
+    <p id="finalMsg"></p>
+    <button onclick="restartGame()">Reiniciar</button>
+  </div>
+</div>
+
+<script>
+const game = document.getElementById("game");
+const paddle = document.getElementById("paddle");
+const ball = document.getElementById("ball");
+const scoreEl = document.getElementById("score");
+const timerEl = document.getElementById("timer");
+const gameOverScreen = document.getElementById("gameOver");
+const finalMsg = document.getElementById("finalMsg");
+
+let score, paddleX, ballX, ballY, ballSpeedX, ballSpeedY, timeLeft, timerInterval;
+let bricks = [];
+const brickRows = 5;
+const brickCols = 9;
+const colors = ["#f00", "#0f0", "#00f", "#ff0", "#f0f"];
+let gameRunning = true;
+
+let leftPressed = false;
+let rightPressed = false;
+const paddleSpeed = 6; // velocidad de movimiento
+
+function createBricks() {
+  // limpiar ladrillos anteriores
+  bricks.forEach(b => b?.remove());
+  bricks = [];
+
+  for (let r = 0; r < brickRows; r++) {
+    for (let c = 0; c < brickCols; c++) {
+      const brick = document.createElement("div");
+      brick.classList.add("brick");
+      brick.style.left = (c * 65 + 20) + "px";
+      brick.style.top = (r * 25 + 20) + "px";
+      brick.style.background = colors[r % colors.length];
+      game.appendChild(brick);
+      bricks.push(brick);
+    }
+  }
+}
+
+function startGame() {
+  score = 0;
+  paddleX = 250;
+  ballX = 290; 
+  ballY = 200;
+  ballSpeedX = 3; 
+  ballSpeedY = -3;
+  timeLeft = 60;
+  gameRunning = true;
+
+  leftPressed = false;
+  rightPressed = false;
+
+  scoreEl.textContent = score;
+  paddle.style.left = paddleX + "px";
+  ball.style.left = ballX + "px";
+  ball.style.top = ballY + "px";
+  createBricks();
+
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = timeLeft;
+    if (timeLeft <= 0) endGame("⏱️ ¡Se acabó el tiempo!");
+  }, 1000);
+
+  requestAnimationFrame(gameLoop);
+}
+
+function endGame(msg) {
+  gameRunning = false;
+  clearInterval(timerInterval);
+  finalMsg.textContent = msg + " | Puntos: " + score;
+  gameOverScreen.style.display = "flex";
+}
+
+function restartGame() {
+  gameOverScreen.style.display = "none";
+  startGame();
+}
+
+// Movimiento del paddle con flechas y A/D
+document.addEventListener("keydown", e => {
+  if (!gameRunning) return;
+  if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") leftPressed = true;
+  if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") rightPressed = true;
+});
+document.addEventListener("keyup", e => {
+  if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") leftPressed = false;
+  if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") rightPressed = false;
+});
+
+function gameLoop() {
+  if (!gameRunning) return;
+
+  // mover paddle
+  if (leftPressed) paddleX -= paddleSpeed;
+  if (rightPressed) paddleX += paddleSpeed;
+  paddleX = Math.max(0, Math.min(500, paddleX));
+  paddle.style.left = paddleX + "px";
+
+  // Mover pelota
+  ballX += ballSpeedX;
+  ballY += ballSpeedY;
+
+  // Rebote en paredes
+  if (ballX <= 0 || ballX >= 580) ballSpeedX *= -1;
+  if (ballY <= 0) ballSpeedY *= -1;
+
+  // Perder si la bola cae
+  if (ballY >= 380) {
+    endGame("💀 ¡Perdiste!");
+    return;
+  }
+
+  // Colisión con paleta
+  if (
+    ballY + 20 >= 370 &&
+    ballX + 20 >= paddleX &&
+    ballX <= paddleX + 100
+  ) {
+    ballSpeedY *= -1;
+  }
+
+  // Colisión con ladrillos
+  let bricksLeft = 0;
+  for (let i = 0; i < bricks.length; i++) {
+    const b = bricks[i];
+    if (!b) continue;
+    bricksLeft++;
+    const bx = b.offsetLeft;
+    const by = b.offsetTop;
+    if (
+      ballX + 20 >= bx &&
+      ballX <= bx + 60 &&
+      ballY + 20 >= by &&
+      ballY <= by + 20
+    ) {
+      // 🔊 reproducir sonido break.mp3 al romper ladrillo
+      const breakSound = new Audio('break.mp3');
+      breakSound.volume = 0.7;
+      breakSound.play();
+
+      b.remove();
+      bricks[i] = null;
+      ballSpeedY *= -1;
+      score++;
+      scoreEl.textContent = score;
+    }
+  }
+
+  // Si rompiste todos, regenerar
+  if (bricksLeft === 0) createBricks();
+
+  ball.style.left = ballX + "px";
+  ball.style.top = ballY + "px";
+
+  requestAnimationFrame(gameLoop);
+}
+
+startGame();
+</script>
+</body>
+</html>

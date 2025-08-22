@@ -1,0 +1,29 @@
+body {
+    text-align: center;
+    background-color: rgb(22, 22, 22);
+    color: aliceblue;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.games {
+    margin: 40px auto;   /* auto en los costados centra el bloque */
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 50%;          /* sigue ocupando la mitad */
+}
+
+
+.game {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+img {
+    border-radius: 20px;
+}
+
+a {
+    text-decoration: none;
+    color: aliceblue;
+}

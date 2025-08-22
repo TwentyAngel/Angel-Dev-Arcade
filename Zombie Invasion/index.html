@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Zombie Defense</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: black;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+  #game {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+  #brain {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 80px;
+    z-index: 5;
+  }
+  .zombie {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    background-size: cover;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.5s;
+  }
+  #hud {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    display: flex;
+    gap: 30px;
+  }
+  #message {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    display: none;
+    text-align: center;
+  }
+  #retryBtn, #backBtn {
+    display: none;
+    margin-top: 10px;
+    font-size: 24px;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+  #backBtn {
+    margin-left: 10px;
+  }
+  .particle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background: red;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="brain"><img src="brain.png" alt="cerebro" width="120px" height="120px"></div>
+  <div id="hud">
+    <div>Tiempo: <span id="timer">60</span></div>
+    <div>Score: <span id="score">0</span></div>
+  </div>
+  <div id="message">
+    <div id="messageText"></div>
+    <button id="retryBtn">Reintentar</button>
+    <button id="backBtn">Regresar</button>
+  </div>
+</div>
+
+<script>
+const game = document.getElementById("game");
+const brain = document.getElementById("brain");
+const timerEl = document.getElementById("timer");
+const scoreEl = document.getElementById("score");
+const message = document.getElementById("message");
+const messageText = document.getElementById("messageText");
+const retryBtn = document.getElementById("retryBtn");
+const backBtn = document.getElementById("backBtn");
+
+let score = 0;
+let timeLeft = 60;
+let gameOver = false;
+
+const zombieFrames = ["zombie1.png","zombie2.png","zombie3.png","zombie4.png"];
+
+function spawnZombie() {
+  if (gameOver) return;
+
+  const zombie = document.createElement("div");
+  zombie.className = "zombie";
+  game.appendChild(zombie);
+
+  let frame = 0;
+  const anim = setInterval(() => {
+    frame = (frame + 1) % zombieFrames.length;
+    zombie.style.backgroundImage = `url(${zombieFrames[frame]})`;
+  }, 150);
+
+  let side = Math.floor(Math.random() * 4);
+  let x, y;
+  if (side === 0) { x = -64; y = Math.random() * window.innerHeight; }
+  else if (side === 1) { x = window.innerWidth; y = Math.random() * window.innerHeight; }
+  else if (side === 2) { x = Math.random() * window.innerWidth; y = -64; }
+  else { x = Math.random() * window.innerWidth; y = window.innerHeight; }
+
+  zombie.style.left = x + "px";
+  zombie.style.top = y + "px";
+
+  function move() {
+    if (gameOver) { zombie.remove(); clearInterval(anim); return; }
+
+    const zx = x + 32;
+    const zy = y + 32;
+    const brainRect = brain.getBoundingClientRect();
+    const gameRect = game.getBoundingClientRect();
+    const brainX = brainRect.left + brainRect.width/2 - gameRect.left;
+    const brainY = brainRect.top + brainRect.height/2 - gameRect.top;
+
+    let dx = brainX - zx;
+    let dy = brainY - zy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    dx /= dist; dy /= dist;
+
+    let speed = 0.5 + (60 - timeLeft) * 0.04;
+    x += dx * speed;
+    y += dy * speed;
+    zombie.style.left = x + "px";
+    zombie.style.top = y + "px";
+
+    zombie.style.transform = (dx < 0 ? "scaleX(-1)" : "scaleX(1)");
+
+    const zombieRect = zombie.getBoundingClientRect();
+    const brainRectCheck = brain.getBoundingClientRect();
+    const hit = !(zombieRect.right < brainRectCheck.left || 
+                  zombieRect.left > brainRectCheck.right || 
+                  zombieRect.bottom < brainRectCheck.top || 
+                  zombieRect.top > brainRectCheck.bottom);
+
+    if (!gameOver && hit) {
+      endGame(false);
+      clearInterval(anim);
+      zombie.remove();
+      return;
+    }
+
+    requestAnimationFrame(move);
+  }
+  move();
+
+  zombie.onclick = () => {
+    if(gameOver) return;
+
+    // Sonido de disparo
+    const shotSound = new Audio('shot.mp3');
+    shotSound.volume = 0.7;
+    shotSound.play();
+
+    score++;
+    scoreEl.textContent = score;
+
+    zombie.style.transition = "transform 0.5s, opacity 0.5s";
+    zombie.style.transform += " rotate(90deg) scale(0)";
+    zombie.style.opacity = 0;
+
+    spawnParticles(x + 32, y + 32);
+
+    setTimeout(() => zombie.remove(), 500);
+    clearInterval(anim);
+  };
+}
+
+function spawnParticles(x, y) {
+  for(let i=0;i<10;i++){
+    const p = document.createElement("div");
+    p.className = "particle";
+    game.appendChild(p);
+    p.style.left = x + "px";
+    p.style.top = y + "px";
+
+    const angle = Math.random()*2*Math.PI;
+    const speed = Math.random()*3 + 2;
+    let dx = Math.cos(angle)*speed;
+    let dy = Math.sin(angle)*speed;
+    let life = 20;
+
+    function animate(){
+      if(life-- <=0){ p.remove(); return; }
+      const rect = p.getBoundingClientRect();
+      p.style.left = (rect.left + dx) + "px";
+      p.style.top = (rect.top + dy) + "px";
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+}
+
+const timer = setInterval(() => {
+  if (gameOver) return;
+
+  if (timeLeft <= 0) {
+    clearInterval(timer);
+    endGame(true);
+  } else {
+    timeLeft--;
+    timerEl.textContent = timeLeft;
+  }
+}, 1000);
+
+function spawnLoop() {
+  if (gameOver) return;
+  spawnZombie();
+  let delay = 2000 - (60 - timeLeft) * 15;
+  if (delay < 400) delay = 400;
+  setTimeout(spawnLoop, delay);
+}
+spawnLoop();
+
+function endGame(win) {
+  if(gameOver) return;
+  gameOver = true;
+  brain.style.display = "none";
+  message.style.display = "block";
+  messageText.textContent = win ? "¡Ganaste! 🎉" : "¡Perdiste! 🧟";
+  retryBtn.style.display = "inline-block";
+  backBtn.style.display = "inline-block";
+}
+
+backBtn.onclick = () => {
+  window.location.href = "../index.html";
+};
+
+retryBtn.onclick = () => {
+  gameOver = false;
+  score = 0;
+  timeLeft = 60;
+  scoreEl.textContent = score;
+  timerEl.textContent = timeLeft;
+  brain.style.display = "block";
+  message.style.display = "none";
+  retryBtn.style.display = "none";
+  backBtn.style.display = "none";
+
+  document.querySelectorAll(".zombie, .particle").forEach(z => z.remove());
+
+  spawnLoop();
+  playIdleSound(); // reiniciar sonido idle al reiniciar juego
+};
+
+// Sonido idle de zombies
+function playIdleSound() {
+    if(gameOver) return;
+    const idleSound = new Audio('idle.mp3');
+    idleSound.volume = 0.5;
+    idleSound.play();
+    setTimeout(playIdleSound, 5000); // repetir cada 5 segundos
+}
+
+// Iniciar sonido idle al comienzo del juego
+playIdleSound();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Explodes the planet</title>
+  <link rel="stylesheet" href="estilo.css">
+  <style>
+    #nukeVideo {
+      display: none;           /* oculto al inicio */
+      margin: 20px auto;       /* centrado horizontal */
+      transform: scale(1.7);   /* escala del video */
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Explodes the planet</h1>
+
+  <!-- Imagen inicial -->
+  <img src="pla.gif" alt="Explosión" id="nukeImage" class="pla">
+
+  <!-- Video que reemplazará la imagen -->
+  <video id="nukeVideo">
+    <source src="explodes.mp4" type="video/mp4">
+  </video>
+
+  <h2 style="color: rgb(223, 2, 2);">¡Dangerous!</h2>
+
+  <!-- Botón -->
+  <div class="btn">
+    <img src="btn.png" alt="Botón nuclear" id="nukeButton">
+  </div>
+
+  <!-- Audio de explosión -->
+  <audio id="boomAudio" src="nuke-bomb.mp3" preload="auto"></audio>
+
+
+  <script>
+    const nukeButton = document.getElementById("nukeButton");
+    const nukeImage = document.getElementById("nukeImage");
+    const nukeVideo = document.getElementById("nukeVideo");
+    const boomAudio = document.getElementById("boomAudio");
+    const btnContainer = document.querySelector(".btn");
+
+    nukeButton.addEventListener("click", function() {
+      // Oculta la imagen y el botón
+      nukeImage.style.display = 'none';
+      btnContainer.style.display = 'none';
+
+      // Muestra y reproduce el video
+      nukeVideo.style.display = 'block';
+      nukeVideo.play();
+
+      nukeVideo.classList.add('shake');
+      nukeVideo.play();
+
+      // Reproduce el audio
+      boomAudio.play().catch(err => console.log("Error al reproducir audio:", err));
+
+      // Redirige cuando termine el video
+      nukeVideo.onended = () => {
+        window.location.href = "try.html";
+      };
+    });
+  </script>
+
+</body>
+</html>

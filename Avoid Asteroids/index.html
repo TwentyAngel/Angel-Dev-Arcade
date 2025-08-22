@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Avoid Asteroids</title>
+<style>
+  body {
+    margin: 0;
+    background: black;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+
+  #game {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Estrellas CSS */
+  .star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle 2s infinite alternate;
+  }
+
+  @keyframes twinkle {
+    from { opacity: 0.2; }
+    to { opacity: 1; }
+  }
+
+  /* Nave */
+  #player {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 80px;
+    background: url("ship.png") no-repeat center/contain;
+  }
+
+  /* Meteoritos */
+  .meteor {
+    position: absolute;
+    top: -60px;
+    background: url("meteor.png") no-repeat center/contain;
+  }
+
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 20px;
+  }
+
+  /* Pantalla de Game Over */
+  #gameOver {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    color: red;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    display: none;
+  }
+
+  #gameOver button {
+    margin-top: 20px;
+    font-size: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="player"></div>
+  <div id="hud">Score: <span id="score">0</span> | Tiempo: <span id="time">0</span>s</div>
+  <div id="gameOver">
+    <div id="finalText"></div>
+    <button onclick="location.reload()">Reintentar</button>
+  </div>
+</div>
+
+<script>
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const scoreText = document.getElementById("score");
+const timeText = document.getElementById("time");
+const gameOverScreen = document.getElementById("gameOver");
+const finalText = document.getElementById("finalText");
+
+let score = 0;
+let time = 0;
+let gameOver = false;
+let playerSpeed = 8;
+let keys = {};
+
+// Variables para meteoritos
+let meteorGrowthFactor = 0;
+
+// Movimiento de jugador
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function movePlayer() {
+  let rect = player.getBoundingClientRect();
+  if (keys["a"] && rect.left > 0) player.style.left = player.offsetLeft - playerSpeed + "px";
+  if (keys["d"] && rect.right < window.innerWidth) player.style.left = player.offsetLeft + playerSpeed + "px";
+  if (keys["w"] && rect.top > 0) player.style.top = player.offsetTop - playerSpeed + "px";
+  if (keys["s"] && rect.bottom < window.innerHeight) player.style.top = player.offsetTop + playerSpeed + "px";
+}
+
+// Crear meteoritos
+function createMeteor() {
+  if (gameOver) return;
+  let meteor = document.createElement("div");
+  meteor.className = "meteor";
+  meteor.style.left = Math.random() * (window.innerWidth - 40) + "px";
+
+  // Tamaño inicial + crecimiento por tiempo + crecimiento extra cada 20 seg
+  let baseSize = 40;
+  let sizeIncrease = time * 0.5 + meteorGrowthFactor;
+  meteor.style.width = baseSize + sizeIncrease + "px";
+  meteor.style.height = baseSize + sizeIncrease + "px";
+
+  game.appendChild(meteor);
+
+  let speed = 3 + time * 0.1; // velocidad aumenta con el tiempo
+  let fall = setInterval(() => {
+    if (gameOver) {
+      clearInterval(fall);
+      meteor.remove();
+      return;
+    }
+
+    meteor.style.top = meteor.offsetTop + speed + "px";
+
+    if (meteor.offsetTop > window.innerHeight) {
+      meteor.remove();
+      score++;
+      scoreText.textContent = score;
+      clearInterval(fall);
+    }
+
+    if (collision(player, meteor)) {
+      endGame();
+      clearInterval(fall);
+    }
+  }, 30);
+}
+
+// Colisiones
+function collision(a, b) {
+  let r1 = a.getBoundingClientRect();
+  let r2 = b.getBoundingClientRect();
+  return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+}
+
+// Estrellas
+function createStars(num) {
+  for (let i = 0; i < num; i++) {
+    let star = document.createElement("div");
+    star.className = "star";
+    star.style.left = Math.random() * window.innerWidth + "px";
+    star.style.top = Math.random() * window.innerHeight + "px";
+    star.style.animationDuration = (Math.random() * 2 + 1) + "s";
+    game.appendChild(star);
+  }
+}
+
+// Game Over
+function endGame() {
+  gameOver = true;
+  gameOverScreen.style.display = "flex";
+  finalText.textContent = `¡Game Over! Score: ${score} | Tiempo: ${time}s`;
+}
+
+// Timer
+setInterval(() => {
+  if (!gameOver) time++;
+  timeText.textContent = time;
+}, 1000);
+
+// Meteoritos: 20 por segundo
+setInterval(() => {
+  if (!gameOver) {
+    for (let i = 0; i < 5; i++) {
+      createMeteor();
+    }
+  }
+}, 1000);
+
+// Crecimiento extra de meteoritos cada 20 segundos
+setInterval(() => {
+  meteorGrowthFactor += 5; // aumenta 5 px cada 20 segundos
+}, 20000);
+
+// Loop principal
+function loop() {
+  if (!gameOver) {
+    movePlayer();
+    requestAnimationFrame(loop);
+  }
+}
+loop();
+
+// Crear estrellas
+createStars(80);
+</script>
+</body>
+</html>
