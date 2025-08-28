@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Digital Piano</title>
+  <style>
+    @font-face {
+      font-family: "PianoFont";
+      src: url("miFuente.ttf") format("truetype");
+    }
+
+    body {
+      background: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .piano-container {
+      background: #111;
+      border: 4px solid #444;
+      border-radius: 12px;
+      padding: 100px 20px 20px;
+      position: relative;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.7);
+    }
+
+    .piano-title {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      font-family: "PianoFont", cursive;
+      font-size:55px;
+      color: gold;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+    }
+
+    .piano {
+      position: relative;
+      display: flex;
+    }
+
+    .key {
+      border: 1px solid #000;
+      height: 200px;
+      width: 60px;
+      background: white;
+      margin: 0;
+      position: relative;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+      transition: transform 0.1s, background 0.1s;
+      z-index: 1;
+      user-select: none;
+    }
+
+    .key.black {
+      background: black;
+      width: 40px;
+      height: 120px;
+      position: absolute;
+      top: 0;
+      z-index: 2;
+      border-radius: 0 0 4px 4px;
+    }
+
+    .key.active {
+      transform: translateY(3px);
+      background: #ddd;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.7);
+    }
+
+    .key.black.active {
+      background: #333;
+    }
+
+    .key.black[data-note="C5sos"] {
+      margin-left: 15px;
+    }
+
+    .key.black[data-note="D5sos"] {
+      margin-left: 18px;
+    }
+
+    .key.black[data-note="F5sos"] {
+      margin-left: 18px;
+    }
+
+    .key.black[data-note="G5sos"] {
+      margin-left: 19px;
+    }
+
+    .key.black[data-note="A5sos"] {
+      margin-left: 19px;
+    }
+
+    .key.black[data-note="F4sos"] {
+      margin-left: 5px;
+    }
+
+    .key.black[data-note="G4sos"] {
+      margin-left: 5px;
+    }
+
+    .key.black[data-note="A4sos"] {
+      margin-left: 5px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="piano-container">
+    <div class="piano-title">Digital Piano</div>
+    <div class="piano" id="piano"></div>
+  </div>
+
+  <script>
+    const piano = document.getElementById("piano");
+
+    // Notas blancas y sostenidos (sos)
+    const whiteNotes = ["C4","D4","E4","F4","G4","A4","B4","C5","D5","E5","F5","G5","A5","B5"];
+    const blackNotes = ["C4sos","D4sos","F4sos","G4sos","A4sos","C5sos","D5sos","F5sos","G5sos","A5sos"];
+
+    const keys = [];
+
+    // Crear teclas blancas
+    whiteNotes.forEach((note, i) => {
+      const key = document.createElement("div");
+      key.classList.add("key");
+      key.dataset.note = note;
+      piano.appendChild(key);
+      keys.push(key);
+    });
+
+    // Posicionar teclas negras
+    const blackOffsets = {
+      "C4sos": 40, "D4sos": 100, "F4sos": 220, "G4sos": 280, "A4sos": 340,
+      "C5sos": 460, "D5sos": 520, "F5sos": 640, "G5sos": 700, "A5sos": 760
+    };
+
+    blackNotes.forEach(note => {
+      const key = document.createElement("div");
+      key.classList.add("key","black");
+      key.dataset.note = note;
+      key.style.left = blackOffsets[note] + "px";
+      piano.appendChild(key);
+      keys.push(key);
+    });
+
+    // Reproducir sonido
+    function playSound(note, keyElement) {
+      const audio = new Audio(`${note}.mp3`);
+      audio.currentTime = 0;
+      audio.play();
+      keyElement.classList.add("active");
+      audio.addEventListener("ended", () => {
+        keyElement.classList.remove("active");
+      });
+    }
+
+    keys.forEach(key => {
+      key.addEventListener("mousedown", () => {
+        playSound(key.dataset.note, key);
+      });
+
+      key.addEventListener("mouseup", () => {
+        key.classList.remove("active");
+      });
+
+      key.addEventListener("mouseleave", () => {
+        key.classList.remove("active");
+      });
+    });
+  </script>
+  <script>
+    const keyMap = {
+      'a': 'C4', 'w': 'C4sos', 's': 'D4', 'e': 'D4sos', 'd': 'E4',
+      'f': 'F4', 't': 'F4sos', 'g': 'G4', 'y': 'G4sos', 'h': 'A4',
+      'u': 'A4sos', 'j': 'B4', 'k': 'C5', 'o': 'C5sos', 'l': 'D5',
+      'p': 'D5sos', 'ñ': 'E5', "{": 'F5', 'z': 'F5sos', 'x': 'G5',
+      'c': 'G5sos', 'v': 'A5', 'b': 'A5sos', 'n': 'B5'
+    };
+  
+    // Para evitar que se repita el sonido al mantener presionada la tecla
+    const activeKeys = new Set();
+  
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat) return; // Ignora repeticiones
+      const note = keyMap[e.key.toLowerCase()];
+      if (!note) return;
+  
+      const keyElement = document.querySelector(`.key[data-note="${note}"]`);
+      if (keyElement && !activeKeys.has(note)) {
+        activeKeys.add(note);
+        playSound(note, keyElement);
+      }
+    });
+  
+    document.addEventListener('keyup', (e) => {
+      const note = keyMap[e.key.toLowerCase()];
+      if (!note) return;
+  
+      const keyElement = document.querySelector(`.key[data-note="${note}"]`);
+      if (keyElement) {
+        keyElement.classList.remove("active");
+        activeKeys.delete(note);
+      }
+    });
+  </script>
+  
+  
+</body>
+</html>
